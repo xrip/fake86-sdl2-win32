@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2020      Gabor Lenart "LGB"
@@ -152,3 +153,4 @@ int hostfs_init ( void )
 		return sdl_error("Cannot determine preference directory");
 	return 0;
 }
+#endif

@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2020      Gabor Lenart "LGB"
@@ -19,8 +20,7 @@
 
 #ifndef FAKE86_HOSTFS_H_INCLUDED
 #define FAKE86_HOSTFS_H_INCLUDED
-
-#include <SDL2/SDL.h>
+#include "SDL2/SDL.h"
 
 #define hostfs_read			SDL_RWread
 #define hostfs_write			SDL_RWwrite
@@ -40,4 +40,5 @@ extern HOSTFS_FILE *hostfs_open ( const char *fn, const char *mode );
 extern HOSTFS_FILE *hostfs_open_with_feedback ( const char *fn, const char *mode, const char *msg );
 extern int hostfs_load_binary ( const char *fn, void *buf, int min_size, int max_size, const char *msg );
 
+#endif
 #endif

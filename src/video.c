@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2010-2013 Mike Chambers
@@ -22,8 +23,8 @@
    a lot of this code is inefficient, and just plain ugly. i plan to rework
    large sections of it soon. */
 
-#include <SDL2/SDL.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "video.h"
@@ -262,6 +263,7 @@ void vidinterrupt(void) {
 
 int initcga ( void )
 {
+#if !PICO_ON_DEVICE
 	uint8_t *fdef = SDL_malloc(sizeof mem_asciivga_dat);
 	printf("Loading fonts (%u bytes)\n", (unsigned int)(sizeof mem_asciivga_dat));
 	if (!fdef) {
@@ -274,7 +276,7 @@ int initcga ( void )
 		fontcga = mem_asciivga_dat;
 	} else
 		fontcga = fdef;
-
+#endif
 	palettecga[0] = rgb (0, 0, 0);
 	palettecga[1] = rgb (0, 0, 0xAA);
 	palettecga[2] = rgb (0, 0xAA, 0);
@@ -860,3 +862,4 @@ void initVideoPorts(void) {
 	set_port_write_redirector (0x3B0, 0x3DA, &outVGA);
 	set_port_read_redirector (0x3B0, 0x3DA, &inVGA);
 }
+#endif

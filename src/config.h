@@ -34,9 +34,7 @@
 // Try to enable using KVM (only compiles support. you still need -kvm switch to use that then!).
 // Note, that this will be undefined at the end of this file, if Fake86 is not built for linux
 // Highly experimental, and not work at all!!!!
-#define USE_KVM
 
-#define USE_OSD
 
 // Protect video emulation thread with a mutex when accessing screen.
 // Currently it's not needed, as other parts would effect the screen from the main thread in the old Fake86 is not used anymore.

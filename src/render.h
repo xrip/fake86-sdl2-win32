@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2010-2012 Mike Chambers
@@ -42,4 +43,5 @@ extern int	initscreen	( const char *ver   );
 extern void	setwindowtitle	( const char *extra );
 extern void	doscrmodechange	( void );
 
+#endif
 #endif

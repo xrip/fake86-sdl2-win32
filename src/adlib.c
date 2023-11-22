@@ -21,7 +21,6 @@
 /* adlib.c: very ugly Adlib OPL2 emulation for Fake86. very much a work in progress. :) */
 
 #include "config.h"
-#include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdio.h>
 

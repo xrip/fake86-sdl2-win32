@@ -20,9 +20,10 @@
 
 /* input.c: functions for translation of SDL scancodes to BIOS scancodes,
    and handling of SDL events in general. */
-
-#include <stdio.h>
+#if !PICO_ON_DEVICE
 #include <SDL2/SDL.h>
+#endif
+#include <stdio.h>
 #include <stdint.h>
 
 #include "input.h"
@@ -38,6 +39,7 @@ uint8_t keyboardwaitack = 0;
 int hijacked_input = 0;
 static uint8_t keydown[0x100];
 
+#if !PICO_ON_DEVICE
 static int translatescancode_from_sdl ( SDL_Keycode keyval )
 {
 	//printf("translatekey for 0x%04X %s\n", keyval, SDL_GetKeyName(keyval));
@@ -171,17 +173,14 @@ void handleinput ( void )
 	if (SDL_PollEvent (&event) ) {
 		switch (event.type) {
 			case SDL_TEXTEDITING:
-				input_text_event_cb(event.edit.text);
 				break;
 			case SDL_TEXTINPUT:
-				input_text_event_cb(event.text.text);
 				break;
 			case SDL_KEYDOWN:
 				if (event.key.keysym.sym < 32) {
 					char fake_text[2];
 					fake_text[0] = event.key.keysym.sym;
 					fake_text[1] = 0;
-					input_text_event_cb(fake_text);
 				}
 				translated_key = translatescancode_from_sdl(event.key.keysym.sym);
 				if (translated_key >= 0) {
@@ -267,3 +266,8 @@ void handleinput ( void )
 		}
 	}
 }
+#else
+void handleinput ( void ) {
+
+}
+#endif

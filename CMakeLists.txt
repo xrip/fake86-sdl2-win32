@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
+include(pico_sdk_import.cmake)
 
 project(fake86 C CXX ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
+
+pico_sdk_init()
 
 set(CMAKE_INCLUDE_PATH ${PROJECT_SOURCE_DIR}/include)
 set(OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}")
@@ -11,25 +14,31 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 
-set(SDL2_LIB_DIR C:/SDL/lib)
-set(SDL2_INCLUDE_DIR C:/SDL/include)
-set(SDL2_LIBRARY C:/SDL/bin)
+if (PICO_PLATFORM STREQUAL "host")
+    set(SDL2_LIB_DIR C:/SDL/lib)
+    set(SDL2_INCLUDE_DIR C:/SDL/include)
+    set(SDL2_LIBRARY C:/SDL/bin)
 
-#add_compile_definitions(${PROJECT_NAME} FAKE86_EMULATOR)
 
-#add_subdirectory(megadrive)
+    include_directories(
+            ${SDL2_INCLUDE_DIR}
+    )
 
-include_directories(
-        ${SDL2_INCLUDE_DIR}
-)
+    link_directories(
+            ${SDL2_LIB_DIR}
+    )
+else ()
+    #add_compile_definitions(${PROJECT_NAME} NO_GRAPHICS)
 
-link_directories(
-        ${SDL2_LIB_DIR}
-)
+    add_subdirectory(drivers/vga-nextgen)
+    add_subdirectory(drivers/ps2)
+    add_subdirectory(drivers/fatfs)
+    add_subdirectory(drivers/sdcard)
+    add_subdirectory(drivers/nespad)
+endif ()
 
-# INCLUDE FILES THAT SHOULD BE COMPILED:
 
-file(GLOB_RECURSE SRC "src/*.cpp" "src/*.c" "src/*.h")
+file(GLOB_RECURSE SRC "src/*.c")
 
 
 message(STATUS "Add source files:")
@@ -41,14 +50,77 @@ message(STATUS "")
 
 add_executable(${PROJECT_NAME} ${SRC})
 
-target_link_libraries(${PROJECT_NAME} SDL2)
+pico_set_program_name(fake86 "PICO PC/XT 8086 Emulator by xrip")
+pico_set_program_version(fake86 "development version")
 
-message(STATUS "Copying all dependencies to destination folder...")
-file(GLOB PROJECT_DEPENDENCIES ${SDL2_LIBRARY}/*.dll)
+if (PICO_PLATFORM STREQUAL "host")
+    target_link_libraries(${PROJECT_NAME} SDL2)
+    message(STATUS "Copying all dependencies to destination folder...")
+    file(GLOB PROJECT_DEPENDENCIES ${SDL2_LIBRARY}/*.dll)
 
-foreach(Dependency IN LISTS PROJECT_DEPENDENCIES)
-    file(
-            COPY ${Dependency}
-            DESTINATION ${OUTPUT_DIR}
+    foreach (Dependency IN LISTS PROJECT_DEPENDENCIES)
+        file(
+                COPY ${Dependency}
+                DESTINATION ${OUTPUT_DIR}
+        )
+    endforeach ()
+
+else ()
+    if (OVERCLOCKING)
+        set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}-${OVERCLOCKING}MHz")
+
+        target_compile_definitions(${PROJECT_NAME} PRIVATE OVERCLOCKING=${OVERCLOCKING})
+
+        pico_define_boot_stage2(slower_boot2 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+        target_compile_definitions(slower_boot2 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+        pico_set_boot_stage2(${PROJECT_NAME} slower_boot2)
+
+        message(STATUS "==================================")
+        message(STATUS "Overclocking ${OVERCLOCKING}MHz enabled")
+        message(STATUS "==================================")
+        message(STATUS "")
+    endif ()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+            vga-nextgen
+            ps2
+            nespad
+            sdcard
+            fatfs
+
+            pico_runtime
+            pico_stdlib
+            pico_rand
+            pico_multicore
+            hardware_dma
+            hardware_pio
+            hardware_i2c
+            hardware_interp
+            hardware_timer
+            hardware_clocks
+            hardware_pwm
+            hardware_flash
     )
-endforeach()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+            PICO_HEAP_SIZE=0
+            USE_ZONE_FOR_MALLOC=1
+
+            PICO_DEFAULT_UART_RX_PIN=17
+            PICO_DEFAULT_UART_TX_PIN=16
+
+            # SDCARD
+            SDCARD_PIN_SPI0_CS=5
+            SDCARD_PIN_SPI0_SCK=2
+            SDCARD_PIN_SPI0_MOSI=3
+            SDCARD_PIN_SPI0_MISO=4
+
+            # NES Gamepad
+            USE_NESPAD
+            NES_GPIO_CLK=14
+            NES_GPIO_DATA=16
+            NES_GPIO_LAT=15
+    )
+endif ()
+
+pico_enable_stdio_uart(${PROJECT_NAME} 1)
+pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_add_extra_outputs(${PROJECT_NAME})

@@ -23,7 +23,9 @@
 
 #define SDL_MAIN_HANDLED
 #include "config.h"
+#if !PICO_ON_DEVICE
 #include <SDL2/SDL.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +50,6 @@
 #include "i8253.h"
 #include "i8259.h"
 #include "i8237.h"
-#include "console.h"
 #include "video.h"
 #include "ports.h"
 #include "cpu.h"
@@ -79,19 +80,6 @@ void UNREACHABLE_FATAL_ERROR ( void )
 #endif
 
 
-static uint32_t loadbios ( const char *filename )
-{
-	uint8_t bios[0x10000];
-	int readsize = hostfs_load_binary(filename, bios, 1, 0x10000, "BIOS");
-	if (readsize <= 0)
-		return 0;
-	memcpy(RAM + 0x100000 - readsize, bios, readsize);
-	printf("BIOS %s loaded at 0x%05X (%d KB)\n", filename, 0x100000 - readsize, readsize >> 10);
-	memset(readonly + 0x100000 - readsize, 1, readsize);
-	return readsize;
-}
-
-
 static int inithardware( void )
 {
 #ifdef NETWORKING_ENABLED
@@ -109,8 +97,11 @@ static int inithardware( void )
 	printf("  - Intel 8237 DMA controller: ");
 	init8237();
 	puts("OK");
+#if !PICO_ON_DEVICE
 	initVideoPorts();
-	if (usessource) {
+#endif
+	if (0) {
+//	if (usessource) {
 		printf("  - Disney Sound Source: ");
 		initsoundsource();
 		puts("OK");
@@ -132,10 +123,12 @@ static int inithardware( void )
 	if (doaudio)
 		initaudio();
 	inittiming();
+#if !PICO_ON_DEVICE
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | (doaudio ? SDL_INIT_AUDIO : 0)))
 		return sdl_error("Cannot initialize SDL2");
 	if (initscreen(FAKE86_RELEASE_STRING))
 		return 1;
+#endif
 	return 0;
 }
 
@@ -203,11 +196,13 @@ static int EmuThread(void *ptr)
 #ifdef _WIN32
 			//Sleep(10);
 #else
-			usleep(10000);
+//			usleep(10000);
 #endif
 		}
+#if !PICO_ON_DEVICE
 		if (scrmodechange)
 			doscrmodechange();
+#endif
 		if (dohardreset) {
 			reset86();
 			dohardreset = 0;
@@ -222,12 +217,15 @@ int main(int argc, char *argv[])
 	puts(FAKE86_BANNER_STRING);
 	// Initialize SDL with "nothing". So we delay audo/video/etc (whatever needed later) initialization.
 	// However this initalize SDL for using its own functionality only, like SDL_GetPrefPath and other things!
+#if !PICO_ON_DEVICE
         if (SDL_Init(0))
 		return sdl_error("Cannot pre-initialize SDL2");
 	atexit(sdl_shutdown);
-	if (hostfs_init())
-		return -1;
+//	if (hostfs_init())
+
 	parsecl(argc, argv);
+		//return -1;
+#endif
 #ifdef USE_KVM
 	if (!usekvm) {
 		RAM = SDL_malloc(RAM_SIZE);
@@ -249,21 +247,9 @@ int main(int argc, char *argv[])
 #else
 	printf("MEM: using static memory (%uK) for software CPU\n", (RAM_SIZE >> 10));
 #endif
-	memset(readonly, 0, RAM_SIZE);
+	//memset(readonly, 0, RAM_SIZE);
 	memset(RAM, 0, RAM_SIZE);
-	if (!internalbios) {
-		uint32_t biossize = loadbios(biosfile);
-		if (!biossize)
-			return -1;
-		if (biossize <= 8192) {
-			loadrom(0xF6000UL, DEFAULT_ROMBASIC_FILE, 0);
-			if (!loadrom(0xC0000UL, DEFAULT_VIDEOROM_FILE, 1))
-				return -1;
-		}
-	} else {
-		memset(readonly + 0xC0000, 1, 0x40000);
-		bios_internal_install();
-	}
+
 #ifdef DISK_CONTROLLER_ATA
 	if (!loadrom(0xD0000UL, DEFAULT_IDEROM_FILE, 1))
 		return -1;
@@ -281,16 +267,15 @@ int main(int argc, char *argv[])
 	//initmenus();
 	//InitializeCriticalSection(&screenmutex);
 #endif
-	if (useconsole) {
-		if (!SDL_CreateThread(ConsoleThread, "Fake86ConsoleThread", NULL)) {
-			fprintf(stderr, "WARNING: console thread cannot be created, console will be unavailable: %s\n", SDL_GetError());
-		}
-	}
+#if !PICO_ON_DEVICE
 	if (!SDL_CreateThread(EmuThread, "Fake86EmuThread", NULL)) {
 		fprintf(stderr, "Could not create the main emuthread: %s\n", SDL_GetError());
 		return -1;
 	}
 	lasttick = starttick = SDL_GetTicks();
+#else
+    lasttick = starttick - 0;
+#endif
 	while (running) {
 		handleinput();
 #ifdef NETWORKING_ENABLED
@@ -300,24 +285,31 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 		//Sleep(1);
 #else
-		usleep(1000);
+//		usleep(1000);
 #endif
 	}
+#if !PICO_ON_DEVICE
 	endtick = (SDL_GetTicks() - starttick) / 1000;
+#else
+    endtick = 0;
+#endif
 	if (endtick == 0)
 		endtick = 1; //avoid divide-by-zero exception in the code below, if ran for less than 1 second
 	killaudio();
+#if !PICO_ON_DEVICE
 	if (renderbenchmark) {
 		printf("\n%lu frames rendered in %lu seconds.\n", (long unsigned int)totalframes, (long unsigned int)endtick);
 		printf("Average framerate: %lu FPS.\n", (long unsigned int)(totalframes / endtick));
 	}
+#endif
 	printf("\n%lu instructions executed in %lu seconds.\n", (long unsigned int)totalexec, (long unsigned int)endtick);
 	printf("Average speed: %lu instructions/second.\n", (long unsigned int)(totalexec / endtick));
 #ifdef CPU_ADDR_MODE_CACHE
 	printf("\n  Cached modregrm data access count: %lu\n", (long unsigned int)cached_access_count);
 	printf("Uncached modregrm data access count: %lu\n", (long unsigned int)uncached_access_count);
 #endif
-	if (useconsole)
-		exit(0); //makes sure console thread quits even if blocking
+#if !PICO_ON_DEVICE
+	exit(0); //makes sure console thread quits even if blocking
+#endif
 	return 0;
 }

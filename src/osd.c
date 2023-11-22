@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2010-2013 Mike Chambers
@@ -199,4 +200,5 @@ int osd_init ( SDL_Renderer *sdl_ren, SDL_PixelFormat *pixfmt, int texwidth, int
 	printf("OSD: subsystem available with %dx%d pixels and %dx%d characters\n", osd.texwidth, osd.texheight, osd.width, osd.height);
 	return 0;
 }
+#endif
 #endif

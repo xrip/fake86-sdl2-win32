@@ -28,7 +28,7 @@ typedef uint8_t  (*io_read8_cb_t)   (uint16_t portnum);
 typedef void     (*io_write16_cb_t) (uint16_t portnum, uint16_t value);
 typedef uint16_t (*io_read16_cb_t)  (uint16_t portnum);
 
-extern uint8_t portram[0x10000];
+extern uint8_t portram[0x400];
 
 extern void set_port_write_redirector (uint16_t startport, uint16_t endport, io_write8_cb_t callback);
 extern void set_port_read_redirector (uint16_t startport, uint16_t endport, io_read8_cb_t callback);

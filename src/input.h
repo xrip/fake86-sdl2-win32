@@ -26,7 +26,5 @@ extern int     hijacked_input;
 
 extern void handleinput ( void );
 
-// must be implemented somewhere other than input.c
-extern void input_text_event_cb ( const char *s );
 
 #endif

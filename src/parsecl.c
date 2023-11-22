@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2010-2013 Mike Chambers
@@ -21,7 +22,6 @@
 /* parsecl.c: Fake86 command line parsing for runtime options. */
 
 #include "config.h"
-#include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -169,25 +169,24 @@ void parsecl ( int argc, char *argv[] )
 	ethif = 254;
 	usefullscreen = 0;
 	biosfile = DEFAULT_BIOS_FILE;
-
 	for (int i = 1; i < argc; i++) {
 		if (!strcmpi(argv[i], "-h") || !strcmpi(argv[i], "-?") || !strcmpi(argv[i], "-help")) {
 			showhelp();
 		} else if (!strcmpi(argv[i], "-fd0")) {
 			i++;
-			if (insertdisk(0, argv[i]))
+			if (insertdisk(0, 0, NULL, argv[i]))
 				printf("ERROR: Unable to open image file %s\n", argv[i]);
 		} else if (!strcmpi(argv[i], "-fd1")) {
 			i++;
-			if (insertdisk(1, argv[i]))
+			if (insertdisk(1, 0, NULL,  argv[i]))
 				printf("ERROR: Unable to open image file %s\n", argv[i]);
 		} else if (!strcmpi(argv[i], "-hd0")) {
 			i++;
-			if (insertdisk(0x80, argv[i]))
+			if (insertdisk(0x80,  0, NULL, argv[i]))
 				printf("ERROR: Unable to open image file %s\n", argv[i]);
 		} else if (!strcmpi(argv[i], "-hd1")) {
 			i++;
-			if (insertdisk(0x81, argv[i]))
+			if (insertdisk(0x81,  0, NULL, argv[i]))
 				printf("ERROR: Unable to open image file %s\n", argv[i]);
 		}
 		else if (!strcmpi(argv[i], "-net")) {
@@ -223,13 +222,14 @@ void parsecl ( int argc, char *argv[] )
 		} else if (!strcmpi(argv[i], "-speed")) {
 			i++;
 			speed = (uint32_t)atol(argv[i]);
-		} else if (!strcmpi(argv[i], "-noscale"))	noscale = 1;
+		}
+//        else if (!strcmpi(argv[i], "-noscale"))	noscale = 1;
 		else if (!strcmpi(argv[i], "-verbose"))		verbose = 1;
-		else if (!strcmpi(argv[i], "-smooth"))		nosmooth = 0;
-		else if (!strcmpi(argv[i], "-fps"))		renderbenchmark = 1;
+//		else if (!strcmpi(argv[i], "-smooth"))		nosmooth = 0;
+//		else if (!strcmpi(argv[i], "-fps"))		renderbenchmark = 1;
 		else if (!strcmpi(argv[i], "-nosound"))		doaudio = 0;
 		else if (!strcmpi(argv[i], "-fullscreen"))	usefullscreen = 1;
-		else if (!strcmpi(argv[i], "-delay"))		framedelay = atol(argv[++i]);
+//		else if (!strcmpi(argv[i], "-delay"))		framedelay = atol(argv[++i]);
 		else if (!strcmpi(argv[i], "-console"))		useconsole = 1;
 		else if (!strcmpi(argv[i], "-slowsys"))		slowsystem = 1;
 		else if (!strcmpi(argv[i], "-internalbios"))	internalbios = 1;
@@ -254,3 +254,4 @@ void parsecl ( int argc, char *argv[] )
 			bootdrive = 0xFF; //ROM BASIC fallback
 	}
 }
+#endif

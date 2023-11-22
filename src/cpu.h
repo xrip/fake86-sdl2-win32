@@ -84,13 +84,13 @@ struct addrmodecache_s {
 
 
 #define RAM_SIZE (1024 << 10)
-
-#ifdef USE_KVM
-extern uint8_t *RAM;
+#if PICO_ON_DEVICE
+extern uint8_t RAM[64 << 10];
 #else
 extern uint8_t RAM[RAM_SIZE];
 #endif
-extern uint8_t readonly[RAM_SIZE];
+
+//extern uint8_t readonly[RAM_SIZE];
 extern uint8_t running;
 extern uint32_t makeupticks;
 extern uint64_t totalexec;

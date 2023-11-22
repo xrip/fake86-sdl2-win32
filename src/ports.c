@@ -32,13 +32,13 @@
 
 //#define DEBUG_PORT_TRAFFIC
 
-uint8_t portram[0x10000];
+uint8_t portram[0x400];
 
 
-static io_write8_cb_t  port_write_callback  [0x10000];
-static io_read8_cb_t   port_read_callback   [0x10000];
-static io_write16_cb_t port_write_callback16[0x10000];
-static io_read16_cb_t  port_read_callback16 [0x10000];
+static io_write8_cb_t  port_write_callback  [0x400];
+static io_read8_cb_t   port_read_callback   [0x400];
+static io_write16_cb_t port_write_callback16[0x400];
+static io_read16_cb_t  port_read_callback16 [0x400];
 
 
 
@@ -75,7 +75,7 @@ static uint16_t sliced_port16_reader ( uint16_t portnum )
 
 void ports_init ( void )
 {
-	for (int a = 0; a < 0x10000; a++) {
+    for (int a = 0; a < sizeof portram; a++) {
 		port_write_callback  [a] = unknown_port_writer;
 		port_read_callback   [a] = unknown_port_reader;
 		port_write_callback16[a] = sliced_port16_writer;

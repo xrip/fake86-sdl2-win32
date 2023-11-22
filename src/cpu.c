@@ -23,6 +23,7 @@
  * Fake86. */
 
 #include "config.h"
+#include "rom.h"
 #ifndef CPU_INSTRUCTION_FLOW_CACHE
 
 #include <stdint.h>
@@ -71,15 +72,17 @@ static const uint8_t parity[0x100] = {
 
 #ifdef USE_KVM
 uint8_t *RAM;
+#endif
+#if PICO_ON_DEVICE
+uint8_t RAM[64 << 10];
 #else
 uint8_t RAM[RAM_SIZE];
 #endif
 
-
 struct cpu cpu;
 
 
-uint8_t readonly[RAM_SIZE];
+//uint8_t readonly[RAM_SIZE];
 //static uint8_t hltstate = 0;
 //static uint8_t /*opcode,*/ cpu.segoverride /*, reptype */;
 //uint16_t cpu.segregs[4];
@@ -129,23 +132,11 @@ void write86(uint32_t addr32, uint8_t value) {
 	if (!readonly[tempaddr32])
 		addrcachevalid[tempaddr32] = 0;
 #endif
-	if (readonly[tempaddr32] || (tempaddr32 >= 0xC0000)) {
+	if ((tempaddr32 >= 0xC0000)) {
 		return;
 	}
-
 	if ((tempaddr32 >= 0xA0000) && (tempaddr32 <= 0xBFFFF)) {
-		if ((vidmode != 0x13) && (vidmode != 0x12) &&
-		    (vidmode != 0xD) && (vidmode != 0x10)) {
-			RAM[tempaddr32] = value;
-			updatedscreen = 1;
-		} else if (((VGA_SC[4] & 6) == 0) && (vidmode != 0xD) &&
-			   (vidmode != 0x10) && (vidmode != 0x12)) {
-			RAM[tempaddr32] = value;
-			updatedscreen = 1;
-		} else {
-			writeVGA(tempaddr32 - 0xA0000, value);
-		}
-
+        RAM[tempaddr32] = value;
 		updatedscreen = 1;
 	} else {
 #ifdef DEBUG_BIOS_DATA_AREA_CPU_ACCESS
@@ -163,23 +154,28 @@ static inline void writew86(uint32_t addr32, uint16_t value) {
 
 uint8_t read86(uint32_t addr32) {
 	addr32 &= 0xFFFFF;
-	if ((addr32 >= 0xA0000) && (addr32 <= 0xBFFFF)) {
-		if ((vidmode == 0xD) || (vidmode == 0xE) || (vidmode == 0x10) ||
-		    (vidmode == 0x12))
-			return readVGA(addr32 - 0xA0000);
-		if ((vidmode != 0x13) && (vidmode != 0x12) && (vidmode != 0xD))
+    if ((addr32 >= 0xFE000UL) && (addr32 <= 0xFFFFFUL)) {                              // BIOS ROM range
+        addr32 -= 0xFE000UL;
+        return BIOS[addr32];
+    } else if ((addr32 >= 0xF6000UL) && (addr32 < 0xFA000UL)) {                               // IBM BASIC ROM LOW
+        addr32 -= 0xF6000UL;
+        return BASICL[addr32];
+    } else if ((addr32 >= 0xFA000UL) && (addr32 < 0xFE000UL)) {                               // IBM BASIC ROM HIGH
+        addr32 -= 0xFA000UL;
+        return BASICH[addr32];
+    }
+
+    else	if ((addr32 >= 0xA0000) && (addr32 <= 0xBFFFF)) {
 			return RAM[addr32];
-		if ((VGA_SC[4] & 6) == 0)
-			return RAM[addr32];
-		else
-			return readVGA(addr32 - 0xA0000);
+
 	}
+
 #ifdef DEBUG_BIOS_DATA_AREA_CPU_ACCESS
 	if ((addr32 & 0xFFF00) == 0x400)
 		printf("DEBUG: CPU accesses (READ) BDA at %Xh, value there: %Xh\n", addr32, RAM[addr32]);
 #endif
 	if (!didbootstrap && !internalbios) {
-		RAM[0x410] = 0x41; // ugly hack to make BIOS always believe we
+		RAM[0x410] = 0b01100111; // ugly hack to make BIOS always believe we
 				   // have an EGA/VGA card installed
 		RAM[0x475] = hdcount; // the BIOS doesn't have any concept of
 				      // hard drives, so here's another hack
@@ -1208,12 +1204,14 @@ static void intcall86(uint8_t intnum) {
 	switch (intnum) {
 	case 0x10:
 		updatedscreen = 1;
+
 		/*if (cpu.regs.byteregs[regah]!=0x0E) {
 			printf("Int 10h AX = %04X\n", cpu.regs.wordregs[regax]);
 		}*/
 		if ((cpu.regs.byteregs[regah] == 0x00) ||
 		    (cpu.regs.byteregs[regah] == 0x10)) {
 			oldregax = cpu.regs.wordregs[regax];
+            printf("Int 10h AX = %04X\n", cpu.regs.wordregs[regax]);
 			vidinterrupt();
 			cpu.regs.wordregs[regax] = oldregax;
 			if (cpu.regs.byteregs[regah] == 0x10)

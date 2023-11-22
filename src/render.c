@@ -1,3 +1,4 @@
+#if !PICO_ON_DEVICE
 /*
   Fake86: A portable, open-source 8086 PC emulator.
   Copyright (C)2010-2013 Mike Chambers
@@ -308,10 +309,12 @@ static uint32_t *start_pixel_access ( int nw, int nh )
 
 static void draw ( void )
 {
+    printf("draw");
 	//uint32_t planemode, vgapage, color, chary, charx, vidptr, divx, divy, curchar, curpixel, usepal, intensity, blockw, curheight;
 	//x1, y1;
 	// Nice. Now time to render madness.
 	//Uint32 *pix;
+    printf("video mode %i\n", vidmode);
 	switch (vidmode) {
 		case 0:
 		case 1:
@@ -326,11 +329,12 @@ static void draw ( void )
 			const uint32_t vgapage = ((uint32_t)VGA_CRTC[0xC] << 8) + (uint32_t)VGA_CRTC[0xD];
 			const uint8_t *vp = RAM + (((portram[0x3D8] == 9) && (portram[0x3D4] == 9)) ? vgapage : 0) + videobase;
 			const uint8_t *fp = fontcga;
+
 			for (int y = 0; y < 400; y++) {
 				for (int x = 0; x < cols; x++) {
 					const uint8_t dat = fp[(*vp++) << 4];
 					const uint8_t ci = *vp++;
-					const uint32_t fg = vidcolor ? palettecga[ci & 15] : ((!(ci & 0x70)) ? palettecga[7] : palettecga[0]);
+                    const uint32_t fg = vidcolor ? palettecga[ci & 15] : ((!(ci & 0x70)) ? palettecga[7] : palettecga[0]);
 					const uint32_t bg = vidcolor ? palettecga[ci >> 4] : ((!(ci & 0x70)) ? palettecga[0] : palettecga[7]);
 					*pix++ = (dat & 0x80) ? fg : bg;
 					*pix++ = (dat & 0x40) ? fg : bg;
@@ -686,3 +690,4 @@ static void draw ( void )
 #endif
 }
 
+#endif
